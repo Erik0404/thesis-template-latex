@@ -18,9 +18,9 @@ jobs:
         OUT_DIR=out/
         mkdir -p $OUT_DIR
         {
-          echo '- [`[XeLaTeX HU]`](thesis-xelatex-hu.pdf) | [`[PDFLaTeX HU]`](thesis-pdflatex-hu.pdf) | [`[LuaLaTeX HU]`](thesis-lualatex-hu.pdf)'
-          echo '- [`[XeLaTeX EN]`](thesis-xelatex-en.pdf) | [`[PDFLaTeX EN]`](thesis-pdflatex-en.pdf) | [`[LuaLaTeX EN]`](thesis-lualatex-en.pdf)'
-          echo '- [`[XeLaTeX Duplex]`](thesis-xelatex-duplex.pdf) | [`[PDFLaTeX Duplex]`](thesis-pdflatex-duplex.pdf) | [`[LuaLaTeX Duplex]`](thesis-lualatex-duplex.pdf)'
+          echo '- [`[XeLaTeX HU]`](nagy_erik_bsc_thesis-xelatex-hu.pdf) | [`[PDFLaTeX HU]`](nagy_erik_bsc_thesis-pdflatex-hu.pdf) | [`[LuaLaTeX HU]`](nagy_erik_bsc_thesis-lualatex-hu.pdf)'
+          echo '- [`[XeLaTeX EN]`](nagy_erik_bsc_thesis-xelatex-en.pdf) | [`[PDFLaTeX EN]`](nagy_erik_bsc_thesis-pdflatex-en.pdf) | [`[LuaLaTeX EN]`](nagy_erik_bsc_thesis-lualatex-en.pdf)'
+          echo '- [`[XeLaTeX Duplex]`](nagy_erik_bsc_thesis-xelatex-duplex.pdf) | [`[PDFLaTeX Duplex]`](nagy_erik_bsc_thesis-pdflatex-duplex.pdf) | [`[LuaLaTeX Duplex]`](nagy_erik_bsc_thesis-lualatex-duplex.pdf)'
           echo "- Commit: [$GITHUB_SHA](https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)"
         } > $OUT_DIR/README.md
         # copy PDF outputs from `pdf` folder

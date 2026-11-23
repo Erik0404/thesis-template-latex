@@ -1,7 +1,7 @@
-thesis.pdf
-thesis-pdflatex*.pdf
-thesis-xelatex*.pdf
-thesis-lualatex*.pdf
+nagy_erik_bsc_thesis.pdf
+nagy_erik_bsc_thesis-pdflatex*.pdf
+nagy_erik_bsc_thesis-xelatex*.pdf
+nagy_erik_bsc_thesis-lualatex*.pdf
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
