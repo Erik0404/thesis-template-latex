@@ -1,0 +1,201 @@
+%----------------------------------------------------------------------------
+\chapter{Megvalósítás}
+\label{chap:implementation}
+%----------------------------------------------------------------------------
+
+A megközelítés által kezelt tesztstratégia, szcenáriók és megszorítások formálisan is megfogalmazhatók. Ez a formalizmus adja az ellenőrzés döntéseinek és a lefedettség-elemzésnek az alapját, és megmutatja, mely döntések maradnak megbízhatók akkor is, ha az LLM válasza hibás. A megvalósítás két részből áll: a \emph{kiszolgáló} összeállítja a promptot és hívja a nyelvi modellt, a \emph{vezérlő} pedig az ellenőrzést, a visszacsatolást és a lefedettség-elemzést végzi.
+
+
+%----------------------------------------------------------------------------
+\section{A válasz formális modellje}
+\label{sec:impl-model}
+%----------------------------------------------------------------------------
+
+\begin{definition}[Tesztstratégia]
+Egy követelményhez tartozó tesztstratégia az $\mathcal{S} = (C, E, R)$ hármas, ahol $C$ a feltételek, $E$ az elvárások, $R$ pedig a szabályok véges halmaza. Egy $r \in R$ szabály $r = (\varphi_r, E_r)$ alakú, ahol $\varphi_r$ a $C$ elemei feletti ítéletlogikai formula, $E_r \subseteq E$ pedig azoknak az elvárásoknak a halmaza, amelyeknek teljesülniük kell, ha $\varphi_r$ igaz.
+\end{definition}
+
+\begin{definition}[Szcenárió]
+Egy szcenárió az $s = (F_s, v_s)$ pár, ahol $F_s$ a metamodell fogalmai feletti tények (alapatomok) véges halmaza, amely új objektumokat is bevezethet, a $v_s \colon C \to \{\mathsf{I}, \mathsf{H}, \mathsf{?}\}$ hozzárendelés pedig a szcenárió által jelölt feltételértékeket adja meg: $\mathsf{I}$, ha a szcenárió a feltételt teljesülőnek, $\mathsf{H}$, ha nem teljesülőnek jelöli, és $\mathsf{?}$, ha nem jelöli. Az $s$ szcenárió \emph{negatív eset}, ha van olyan $c \in C$, amelyre $v_s(c) = \mathsf{H}$.
+\end{definition}
+
+A futó példában $C = \{\mathrm{C1}, \mathrm{C2}\}$, $E = \{\mathrm{E1}\}$ és $R = \{(\mathrm{C1} \land \mathrm{C2},\ \{\mathrm{E1}\})\}$, a TS1 szcenárió pedig
+\begin{align*}
+F_{\mathrm{TS1}} &= \{\mathit{Arrival}(\mathit{obj1}),\ \mathit{trainEvent}(\mathit{t1}, \mathit{obj1}),\ \mathit{DoorsOpen}(\mathit{obj2}),\ \mathit{arrDoors}(\mathit{obj1}, \mathit{obj2})\},\\
+v_{\mathrm{TS1}} &= \{\mathrm{C1} \mapsto \mathsf{I},\ \mathrm{C2} \mapsto \mathsf{I}\}.
+\end{align*}
+
+A nyomon követhetőséget egy $\sigma \colon C \cup E \to \mathrm{Sub}(q)$ leképezés adja, amely minden feltételhez és elváráshoz a $q$ követelményszöveg azon részletét rendeli, amelyből származik. A szabályok $C$ és $E$ elemeire, a szcenáriók $v_s$-en keresztül $C$ elemeire hivatkoznak, így a válasz minden eleme $\sigma$-n keresztül visszavezethető $q$-ra.
+
+
+%----------------------------------------------------------------------------
+\section{A követelmény formalizálása}
+\label{sec:impl-formalization}
+%----------------------------------------------------------------------------
+
+A megszorítások $\Gamma = D \cup \mathcal{E}_\Gamma$ alakúak, ahol $D$ új predikátumok definícióit, $\mathcal{E}_\Gamma$ új hibapredikátumokat tartalmaz. Egy $\beta_\varepsilon(\bar{x})$ törzsű $\varepsilon$ hibapredikátumot az $I$ példánymodell akkor elégít ki, ha a törzsnek nincs illeszkedése:
+\begin{equation}
+I \models \varepsilon \iff I \models \forall \bar{x}\; \neg\beta_\varepsilon(\bar{x}). \label{eq:impl-error}
+\end{equation}
+Egy szabály egy elvárását ezért olyan hibapredikátum formalizálja, amelynek törzse a feltételeket leíró minta és az elvárást leíró minta tagadásának konjunkciója: ahol a feltételek mintája illeszkedik, ott az elvárásénak is illeszkednie kell. A futó példa megszorításai (\aref{lst:impl-constraints}.~lista) a következők:
+\begin{align}
+\alpha(t) &\equiv \exists e\, \exists d\;\; \mathit{trainEvent}(t,e) \land \mathit{Arrival}(e) \land \mathit{arrDoors}(e,d) \land \mathit{DoorsOpen}(d), \label{eq:impl-alpha}\\
+\varepsilon(t,p) &\equiv \alpha(t) \land \mathit{isTargetPic}(p) \land \neg\, \mathit{hasArrivalEvent}(p), \label{eq:impl-eps}
+\end{align}
+ahol $\alpha$ a C1 és a C2 feltétel együttes teljesülését írja le, az $\mathit{isTargetPic}$ a PIC portjára szűkít, a $\mathit{hasArrivalEvent}$ pedig az E1 elvárást fejezi ki. A hibapredikátumok szemantikája szerint minden érvényes modellben
+\begin{equation}
+\forall t\, \forall p\;\; \bigl(\alpha(t) \land \mathit{isTargetPic}(p) \rightarrow \mathit{hasArrivalEvent}(p)\bigr),
+\end{equation}
+ami az R1 szabály elsőrendű megfelelője.
+
+\begin{lstlisting}[language=refinery,float=ht,caption={A futó példa megszorításai Refinery-szintaxisban.},label=lst:impl-constraints]
+pred gen_arrivalWithOpenDoors(Train t) <->
+    trainEvent(t, e), Arrival(e), arrDoors(e, d), DoorsOpen(d).
+
+error gen_picMissingArrivalEvent(Train t, Port p) <->
+    gen_arrivalWithOpenDoors(t), isTargetPic(p), !hasArrivalEvent(p).
+\end{lstlisting}
+
+A metamodell egy szerkezeti részből -- típusok, tartalmazási kapcsolatok, multiplicitások, a rögzített példányrész és a hatókörök -- és a rendszer szabályait leíró $\mathcal{E}_{\mathrm{sys}}$ hibapredikátumokból áll. Jelölje $T_{\mathrm{str}}$ a szerkezeti részt, $T_{\mathrm{sys}} = T_{\mathrm{str}} \cup \mathcal{E}_{\mathrm{sys}}$ a teljes metamodellt, $T_\Gamma = T_{\mathrm{sys}} \cup \Gamma$ a megszorításokkal kiegészített elméletet, $\mathrm{Mod}(T)$ pedig a $T$-t kielégítő példánymodellek halmazát. Ha $\Gamma$ csak definíciókat és hibapredikátumokat tartalmaz, tetszőleges $F$ ténykészletre
+\begin{equation}
+\mathrm{Mod}(T_\Gamma \cup F) \subseteq \mathrm{Mod}(T_{\mathrm{sys}} \cup F) \subseteq \mathrm{Mod}(T_{\mathrm{str}} \cup F), \label{eq:impl-chain}
+\end{equation}
+ahol az első tartalmazás a modelleknek a metamodell fogalmaira vett megszorítására értendő. A hibapredikátumok ugyanis csak kizárnak modelleket, a definíciók pedig a meglévő fogalmakból számított új predikátumokat vezetnek be, és egyetlen modellt sem zárnak ki. Ha $\Gamma$ tényt, hatókört vagy osztályt is tartalmazhatna, a szerkezeti rész megváltozna, és a lánc nem teljesülne. Az ellenőrzés ezért elutasítja azt a választ, amelynek megszorításai között a definíciókon és a hibapredikátumokon kívül más is szerepel: ezen a feltételen múlik, hogy egy ellentmondás okát utólag meg lehessen állapítani.
+
+
+%----------------------------------------------------------------------------
+\section{A válasz előállítása}
+\label{sec:impl-prompt}
+%----------------------------------------------------------------------------
+
+Az \elem{1} hívás promptját a kiszolgáló a metamodellből és a követelményből állítja össze. A metamodellből három halmazt számít ki: a deklarált predikátumnevekét ($N_{\mathrm{pred}}$), a rögzített példányrész objektumneveinekét ($N_{\mathrm{obj}}$) és az új példányt nem engedő osztályokét ($K_{\mathrm{fix}}$). A prompt ezek felsorolásával írja elő, hogy
+\begin{itemize}
+	\item $\Gamma$ új nevei diszjunktak legyenek $N_{\mathrm{pred}}$-től, amit egy kötelező névelőtag (\texttt{gen\_}) biztosít;
+	\item $N_{\mathrm{obj}}$ elemei csak argumentumként szerepeljenek, predikátumként soha;
+	\item $F_s$ csak tényeket tartalmazzon, és ne vezessen be $K_{\mathrm{fix}}$-beli osztályú új objektumot.
+\end{itemize}
+Mindhárom szabály a modellek visszatérő hibáira felel: az újradeklarált név kétértelművé teszi a problémát, a predikátumként hívott objektumnév feloldás nélküli hivatkozás, a rögzített osztály új példánya pedig már a szerkezettel ütközik, így a szcenárió a bemenet szintjén ellentmondásos lesz. Mivel a halmazokat a kiszolgáló számítja, a prompt más metamodellre is változtatás nélkül alkalmazható.
+
+A szcenárió csak a bemenetet rögzítheti. Ha egy elvárás mintája is szerepelne $F_s$-ben, az elvárás minden modellben a tények miatt teljesülne, akkor is, ha $\Gamma$ hibás; a szcenárió így semmit sem tesztelne. Az elvárt kimenetet ezért a modellgenerálásnak kell levezetnie.
+
+A válasz egyetlen JSON-objektum, amely a megszorításokat, a stratégiát a $\sigma$ forrásleképezéssel, valamint a szcenáriókat a $v_s$-t leíró jelölésekkel tartalmazza. A kiszolgáló a nem pontosan formázott választ, például a kódblokkba csomagoltat, is értelmezi; a nem értelmezhetőt formai hibaként jelzi, és ez a többi hibához hasonlóan visszajut a modellhez.
+
+A futó példa elfogadott válaszában $\Gamma$ a metamodell $\mathit{isTargetPic}$ és $\mathit{hasArrivalEvent}$ predikátumát hívja, nem definiálja újra, $F_{\mathrm{TS1}}$ pedig csak a $\mathit{t1}$ vonathoz kapcsolt új érkezést és ajtóállapotot vezeti be; az ArrivalEvent üzenetről nem tartalmaz tényt.
+
+
+%----------------------------------------------------------------------------
+\section{A szcenáriók ellenőrzése}
+\label{sec:impl-validation}
+%----------------------------------------------------------------------------
+
+Egy válasz megengedett, ha a megszorítások szintaktikailag helyesek, csak létező fogalmakra hivatkoznak, és $\Gamma$ csak definíciókat és hibapredikátumokat tartalmaz. Egy $s$ szcenárió elfogadott, ha $\mathrm{Mod}(T_\Gamma \cup F_s) \neq \emptyset$; ekkor a modellgenerálás ebből a halmazból ad tanúmodelleket. Ha a halmaz üres, a döntés a tartalmazási lánc \eqref{eq:impl-chain} további tagjain múlik. A szcenárió kizárható, ha
+\begin{equation}
+\mathrm{Mod}(T_{\mathrm{str}} \cup F_s) = \emptyset \quad \text{és} \quad \exists c \in C\colon\ v_s(c) = \mathsf{H}, \label{eq:impl-exclude}
+\end{equation}
+minden más esetben elutasított. A válasz akkor elfogadott, ha megengedett, minden szcenáriója elfogadott vagy kizárt, és legalább egy szcenáriója elfogadott.
+
+A kizárás biztonságos. Ha $\mathrm{Mod}(T_{\mathrm{str}} \cup F_s) = \emptyset$, akkor a tartalmazási lánc szerint $\mathrm{Mod}(T_\Gamma \cup F_s) = \emptyset$ minden megengedett $\Gamma$ mellett, vagyis az ellentmondás a bemeneti helyzetből fakad, nem a formalizálásból. Egy ilyen negatív eset a rendszerben nem állhat elő, ezért tesztelni sem kell, és a kizárása nem takarhatja el $\Gamma$ hibáját. Pozitív szcenárió viszont nem zárható ki: az ő ellentmondása azt jelzi, hogy az LLM a követelmény helyzetét írta le hibásan. A $T_{\mathrm{str}}$ elméletet a metamodellből úgy kapjuk, hogy minden hibapredikátumot közönséges predikátummá minősítünk át: a predikátumok definiálva maradnak, de modellt nem zárnak ki.
+
+Az elutasított, de szerkezetileg lehetséges szcenáriókra a $T_{\mathrm{sys}} \cup F_s$ elmélet vizsgálata azt is megmutatja, hogy az ellentmondást a megszorítások vagy a rendszer szabályai okozzák (\aref{tab:impl-cases}.~táblázat). Ez a diagnózis a futási naplóba kerül; az LLM nem kapja meg, mert az már célzott javítási tanács volna.
+
+\begin{table}[!ht]
+	\footnotesize
+	\centering
+	\begin{tabular}{c c c >{\raggedright\arraybackslash}p{0.40\textwidth}}
+		\toprule
+		$\mathrm{Mod}(T_\Gamma \cup F_s)$ & $\mathrm{Mod}(T_{\mathrm{sys}} \cup F_s)$ & $\mathrm{Mod}(T_{\mathrm{str}} \cup F_s)$ & Döntés \\
+		\midrule
+		$\neq \emptyset$ & $(\neq \emptyset)$ & $(\neq \emptyset)$ & elfogadott \\
+		$= \emptyset$ & $\neq \emptyset$ & $(\neq \emptyset)$ & elutasított: a megszorítások legális állapotot zárnak ki \\
+		$= \emptyset$ & $= \emptyset$ & $\neq \emptyset$ & elutasított: a szcenárió a rendszer szabályainak mond ellent \\
+		$= \emptyset$ & $(= \emptyset)$ & $= \emptyset$ & negatív esetnél kizárt, egyébként elutasított \\
+		\bottomrule
+	\end{tabular}
+	\caption{Az ellenőrzés lehetséges kimenetei. A zárójeles értékek a tartalmazási láncból következnek, ezért nem kell őket külön vizsgálni; más kombináció nem fordulhat elő.}
+	\label{tab:impl-cases}
+\end{table}
+
+A futó példa első válaszában $\Gamma$ egy további hibapredikátumot is tartalmazott, amely érkezéskor a PIC-en kívüli célportokon tiltotta az ArrivalEvent üzenetet. A rendszer \texttt{missingArrivalEventBubble} szabálya miatt viszont minden olyan modellben, amelyben a vonat érkezik, a $\mathit{hasArrivalEvent}(\mathit{TMCPort})$ is igaz, így ugyanez a modell a többlettiltást sérti. Az érkezést leíró szcenáriók ezért a táblázat második sorába kerültek: a rendszer szerint lehetségesek voltak, csak a megszorítások zárták ki őket.
+
+A modellgenerálás időkorláttal fut, ezért minden vizsgálatnak harmadik kimenete is lehet: eldöntetlen. Az eldöntetlen eredmény nem bizonyít ellentmondást, ezért kizárást sosem indokol, és a szcenárió elutasított. Tanúmodellek keresésekor a generátor időtúllépéskor a már megtalált modelleket sem adja vissza, ezért a vezérlő a kért modellszámot felezve új generálást indít ($n, \lfloor n/2 \rfloor, \dots, 1$). Így szcenáriónként legfeljebb $\lfloor \log_2 n \rfloor + 1$ generálás fut, és a szcenárió csak akkor bukik időtúllépéssel, ha egyetlen modell sem készül el.
+
+
+%----------------------------------------------------------------------------
+\section{Visszacsatolás}
+\label{sec:impl-feedback}
+%----------------------------------------------------------------------------
+
+Az \elem{5} visszacsatolás egy elutasított válasz összes hibaüzenetét egyetlen üzenetbe fűzi: a vezérlő egy válasz minden szcenárióját akkor is ellenőrzi, ha egy korábbi szcenárió már elbukott, így egy javítási kör az összes hibát kezelheti. A Refinery a hibák helyét a metamodellből, a megszorításokból és a tényekből összefűzött szövegben adja meg, amelyet az LLM sosem látott. A vezérlő ezért minden hibahelyet a megszorítások, illetve az érintett szcenárió tényeinek saját sorszámára képez le, és a hibás sort is beidézi; az LLM így a saját szövegében találja meg a hibát.
+
+A kiszolgáló a következő kérés promptját a nyers hibaüzenettel, a felismert hibamintákhoz tartozó általános tanácsokkal (\aref{tab:impl-hints}.~táblázat) és a teljes válasz újraírásának utasításával egészíti ki; az előző választ nem küldi vissza. A tanácsok csak a hibaüzenet mintájától függenek, a követelménytől nem: a nyelv szabályait magyarázzák, a helyes formalizálásról nem árulnak el semmit.
+
+\begin{table}[!ht]
+	\footnotesize
+	\centering
+	\begin{tabular}{>{\raggedright\arraybackslash}p{0.40\textwidth} >{\raggedright\arraybackslash}p{0.52\textwidth}}
+		\toprule
+		Hibaüzenet (minta) & Javítási tanács \\
+		\midrule
+		\texttt{Duplicate name}, \texttt{Ambiguous reference to Relation} & a metamodellben már létező relációt ne deklarálja újra, hanem hívja meg; új név csak \texttt{gen\_} előtaggal \\
+		\texttt{Couldn't resolve reference to Relation} & csak deklarált nevet használjon; csomópontnév csak argumentum lehet \\
+		\texttt{missing ')' at ';'}, \texttt{extraneous input ')'} & a zárójelezett diszjunkciót segédpredikátumba kell kiemelni \\
+		\texttt{Expected boolean expression} & a szabálytörzs minden eleme relációhívás vagy annak tagadása \\
+		\texttt{no viable alternative at input '='} & nincs egyenlőség- és értékadás-operátor \\
+		\texttt{mismatched input \dots{} expecting '.'} & minden deklaráció ponttal zárul \\
+		hiányzó szcenáriók vagy tények & nem üres szcenáriólista, minden szcenárióban tényekkel \\
+		\bottomrule
+	\end{tabular}
+	\caption{A kiszolgáló által felismert hibaminták és a hozzájuk tartozó általános javítási tanácsok.}
+	\label{tab:impl-hints}
+\end{table}
+
+A futó példa első válaszára adott hibaüzenet csak az elutasított szcenáriókat sorolta fel. Ellentmondásra nincs általános tanács, így a modell a nyers üzeneten és az újraírási utasításon kívül mást nem kapott. A második válasz elhagyta a többlettiltást, a szerkezeti tényt leíró harmadik feltételt és a duplikált elvárást, és minden szcenáriója elfogadott lett.
+
+
+%----------------------------------------------------------------------------
+\section{Példánymodellek mint tesztorákulumok}
+\label{sec:impl-oracle}
+%----------------------------------------------------------------------------
+
+Egy elfogadott szcenárió tanúmodelljei a rendszer lehetséges állapotai az adott bemenet mellett. Egy modellt igaz tényeinek halmazával azonosítva egy $a$ tény lehetséges, ha valamelyik modellben szerepel, és szükségszerű, ha mindegyikben:
+\begin{equation}
+T_\Gamma \cup F_s \models a \iff \mathrm{Mod}(T_\Gamma \cup F_s \cup \{\neg a\}) = \emptyset. \label{eq:impl-necessary}
+\end{equation}
+A generátor a modellhalmaznak csak egy $\mathcal{I} \subseteq \mathrm{Mod}(T_\Gamma \cup F_s)$ mintáját adja vissza, amelyre
+\begin{equation}
+\bigcap_{I \in \mathcal{I}} I \;\supseteq \bigcap_{I \in \mathrm{Mod}(T_\Gamma \cup F_s)} I. \label{eq:impl-sample}
+\end{equation}
+A minta közös tényei tehát a szükségszerű tények felülbecslései: egy tény attól, hogy minden megtalált modellben szerepel, még nem szükségszerű, különösen, mert a generátor nem egyenletesen mintavételez. A riport ezért a modelleket tanúként mutatja be -- szcenáriónként az elsőt, a metamodell rögzített tényei és $F_s$ nélkül --, és szükségszerűséget nem állít; ennek igazolásához tényenként egy további ellentmondás-vizsgálat kellene.
+
+A TS1 esetén az E1 elvárás szükségszerűsége ugyanakkor magából $\Gamma$-ból következik. $F_{\mathrm{TS1}}$ mellett $\alpha(\mathit{t1})$ igaz, a PIC portjára az $\mathit{isTargetPic}$ teljesül, így az $\varepsilon$ hibapredikátum miatt minden modellben $\mathit{hasArrivalEvent}(\mathit{PICPort})$; erre a tényre a szükségszerűség feltétele konstrukció szerint teljesül.
+
+
+%----------------------------------------------------------------------------
+\section{Lefedettség-elemzés}
+\label{sec:impl-coverage}
+%----------------------------------------------------------------------------
+
+A \elem{6} elemzés a $v_s$ hozzárendeléseket a szcenáriók jelöléseiből állítja elő: a $c$ jelölés $\mathsf{I}$, a $!c$ jelölés $\mathsf{H}$ értéket ad, a nem jelölt feltétel értéke $\mathsf{?}$. A nem deklarált azonosítókat elhagyja, az önellentmondó jelölést ($c$ és $!c$ együtt) $\mathsf{?}$-nek veszi, és mindkettőről megjegyzést ír a riportba; a futó példa első válasza például az E1 elvárást is feltüntette a feltételjelölések között. A szabályok formuláit rekurzívan leszálló elemző dolgozza fel a következő nyelvtan szerint, ahol $c \in C$:
+\begin{equation*}
+\varphi \mathrel{::=} \tau \mid \varphi \lor \tau, \qquad
+\tau \mathrel{::=} \pi \mid \tau \land \pi, \qquad
+\pi \mathrel{::=} \neg\pi \mid (\varphi) \mid c.
+\end{equation*}
+A nyelvtan a műveletek szokásos precedenciáját kódolja, és mindhárom műveletre több írásmódot is elfogad (például \texttt{\&\&}, \texttt{\&} és \texttt{AND}), mert a modellek ezeket vegyesen használják.
+
+A kiértékelés Kleene háromértékű logikáját követi: a tagadás felcseréli az $\mathsf{I}$ és a $\mathsf{H}$ értéket, a $\mathsf{?}$-et megtartja; a konjunkció értéke $\mathsf{H}$, ha valamelyik tag $\mathsf{H}$, $\mathsf{I}$, ha mindkettő $\mathsf{I}$, egyébként $\mathsf{?}$; a diszjunkció ennek duálisa. Jelölje $\varphi[v]$ a $\varphi$ értékét a $v$ hozzárendelés mellett. Az értékeken a $\mathsf{?} \sqsubseteq \mathsf{I}$, $\mathsf{?} \sqsubseteq \mathsf{H}$ információs rendezést, a hozzárendeléseken a pontonkénti rendezést véve a Kleene-műveletek monotonok, ezért bármely $\varphi$ formulára
+\begin{equation}
+v \sqsubseteq v' \;\Longrightarrow\; \varphi[v] \sqsubseteq \varphi[v']. \label{eq:impl-monotone}
+\end{equation}
+Ha tehát egy szabály értéke a szcenárió jelölései alapján $\mathsf{I}$ vagy $\mathsf{H}$, akkor a jelöléseket kiegészítő bármely teljes hozzárendelés mellett is az marad, $\mathsf{?}$ esetén pedig a szabály a jelölések alapján eldöntetlen. Ha a nem jelölt feltételeket hamisnak vennénk, ez a garancia elveszne: egy csak a C2-t igaznak jelölő szcenárióban az R1 nem aktiválódónak látszana, holott a szcenárió modelljeiben a C1 is teljesülhet.
+
+Jelölje $\Sigma$ az elfogadott szcenáriók halmazát; a kizárt szcenáriók nem számítanak. A lefedettségi mutatók $b \in \{\mathsf{I}, \mathsf{H}\}$ mellett:
+\begin{align}
+\mathrm{cov}^{b}_{C} &= \frac{\bigl|\{c \in C \mid \exists s \in \Sigma\colon v_s(c) = b\}\bigr|}{|C|}, \label{eq:impl-cov-c}\\
+\mathrm{cov}^{b}_{R} &= \frac{\bigl|\{r \in R \mid \exists s \in \Sigma\colon \varphi_r[v_s] = b\}\bigr|}{|R|}, \label{eq:impl-cov-r}\\
+\mathrm{cov}_{E} &= \frac{\bigl|\{e \in E \mid \exists s \in \Sigma\ \exists r \in R\colon e \in E_r \land \varphi_r[v_s] = \mathsf{I}\}\bigr|}{|E|}. \label{eq:impl-cov-e}
+\end{align}
+A feltételekre és a szabályokra vonatkozó mutatók együtt a szoftvertesztelésből ismert feltétel/döntés lefedettségnek felelnek meg, ahol a döntések a szabályok formulái.
+% TODO: hivatkozás a feltétel/döntés lefedettség definíciójára (háttérfejezet)
+
+A futó példában $v_{\mathrm{TS2}} = v_{\mathrm{TS4}} = \{\mathrm{C1} \mapsto \mathsf{H},\ \mathrm{C2} \mapsto \mathsf{H}\}$ és $v_{\mathrm{TS3}} = \{\mathrm{C1} \mapsto \mathsf{H},\ \mathrm{C2} \mapsto \mathsf{I}\}$. Az R1 formulájának értéke a TS1-ben $\mathsf{I}$, a többi szcenárióban $\mathsf{H}$, mert ott a C1 hamis, így mindegyik mutató értéke~1.
