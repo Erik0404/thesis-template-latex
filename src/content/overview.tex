@@ -3,7 +3,9 @@
 \label{chap:overview}
 %----------------------------------------------------------------------------
 
-A javasolt megközelítés egy természetes nyelvű követelményből és a rendszer formális metamodelljéből tesztstratégiát állít elő. Működése neuroszimbolikus: a tesztstratégiát egy nagy nyelvi modell (LLM) javasolja, a Refinery gráfalapú következtető keretrendszer pedig a metamodell alapján formálisan ellenőrzi, így a kimenetre csak ellenőrzött tesztstratégia kerülhet. A megközelítés felépítését \aref{fig:overview}.~ábra mutatja.
+A javasolt megközelítés egy természetes nyelvű követelményből és a rendszer formális metamodelljéből tesztstratégiát állít elő. Működése neuroszimbolikus: 
+a tesztstratégiát egy nagy nyelvi modell (LLM) javasolja, a Refinery gráfalapú következtető keretrendszer pedig a metamodell alapján formálisan ellenőrzi, 
+így a kimenetre csak ellenőrzött tesztstratégia kerülhet. A megközelítés felépítését \aref{fig:overview}.~ábra mutatja.
 % TODO: hivatkozás a Refineryt és az LLM-eket bemutató háttérfejezetre
 
 \begin{figure}[!ht]
@@ -18,13 +20,13 @@ A javasolt megközelítés egy természetes nyelvű követelményből és a rend
 	\item[\elem{1} Formalizálás és teszttervezés.] Egyetlen LLM-hívás, amely a követelményből és a metamodellből háromrészes választ állít elő:
 	\begin{itemize}
 		\item \emph{megszorítások}: a követelmény formalizálása a metamodell fogalmaival, gráf- és hibapredikátumok formájában, amelyek a metamodellt kiegészítik, de nem módosítják;
-		\item \emph{tesztszcenáriók}: néhány ténnyel rögzített bemeneti helyzetek, amelyek megjelölik, mely feltételek teljesülnek bennük; a negatív esetekben legalább egy feltétel nem teljesül;
+		\item \emph{tesztszcenáriók}: néhány ténnyel rögzített bemeneti helyzetek, amelyekhez az LLM megjelöli, mely feltételek teljesülnek bennük. A negatív esetekben legalább egy feltétel nem teljesül;
 		\item \emph{tesztstratégia}: a követelmény atomi feltételei és elvárásai, valamint az ezeket összekötő szabályok.
 	\end{itemize}
-	\item[\elem{2} Megszorítások ellenőrzése.] A Refinery a metamodellel együtt betölti a megszorításokat, és ellenőrzi, hogy szintaktikailag helyesek, csak létező típusokra és kapcsolatokra hivatkoznak, és nem módosítják a metamodellt.
+	\item[\elem{2} Megszorítások ellenőrzése.] A Refinery a metamodellel együtt betölti a megszorításokat, és ellenőrzi, hogy szintaktikai helyességüket, valamint azt, hogy csak létező típusokra és kapcsolatokra hivatkoznak-e, és nem módosítják a metamodellt.
 	\item[\elem{3} Szcenáriók megoldása.] A Refinery minden szcenárióhoz a metamodell, a megszorítások és a szcenárió tényei alapján példánymodelleket generál, vagy kimutatja, hogy a szcenárió ellentmondásos.
 	\item[\elem{4} Ellentmondó szcenárió vizsgálata.] Ellentmondásos szcenárió esetén a Refinery eldönti, hogy a helyzet már a metamodell szerkezete alapján is lehetetlen-e. A szerkezetileg lehetetlen negatív eseteket a megközelítés kizárja, a többi ellentmondásos szcenáriót elutasítja.
-	\item[\elem{5} Visszacsatolás.] Elutasított válasz esetén a hibaüzenetek visszakerülnek az LLM-hez, amely javított választ ad; legfeljebb három kísérlet történik.
+	\item[\elem{5} Visszacsatolás.] Elutasított válasz esetén a hibaüzenetek visszakerülnek az LLM-hez, amely javított választ ad, legfeljebb három kísérlet történik.
 	\item[\elem{6} Lefedettség-elemzés.] Az elfogadott válaszból döntési tábla készül, amely megmutatja, mely feltételeket, szabályokat és elvárásokat tesztelik a szcenáriók, és hol vannak hiányok.
 	\item[\elem{7} Tesztstratégia-riport.] A mérnök által átnézhető kimenet, amely a tesztstratégiát, a megszorításokat, a szcenáriókat a példánymodelljeikkel, a lefedettség-elemzést és a validáció előzményeit tartalmazza.
 \end{description}
@@ -35,7 +37,10 @@ A javasolt megközelítés egy természetes nyelvű követelményből és a rend
 \label{sec:overview-example}
 %----------------------------------------------------------------------------
 
-A megközelítést egy ipari probléma által ihletett vasúti esettanulmányon szemléltetjük, amelynek metamodellje egy vonat fedélzeti rendszerét írja le. A vonathoz egy aktuális vonatesemény tartozik -- érkezés, indulás vagy vészfékezés --, amely a vonat sebességét, a megállási ablakhoz viszonyított helyzetét és az ajtók állapotát is meghatározza; érkezéskor az ajtók mindig nyitva vannak. A fedélzeti komponensek -- köztük a vonatvezérlő, az utaskijelző és a kezelőképernyő -- portjaikon keresztül kapnak üzeneteket. A futó példa követelménye:
+A megközelítést egy ipari probléma által ihletett vasúti esettanulmányon szemléltetjük, amelynek metamodellje egy vonat fedélzeti rendszerét írja le. 
+A vonathoz egy aktuális esemény tartozik, érkezés, indulás vagy vészfékezés, amely a vonat sebességét, a megállási ablakhoz viszonyított helyzetét és 
+az ajtók állapotát is meghatározza. Érkezéskor az ajtók mindig nyitva vannak. A fedélzeti komponensek, köztük a vonatvezérlő, az utaskijelző és a kezelőképernyő  
+portjaikon keresztül kapnak üzeneteket. A futó példa követelménye:
 \begin{quote}
 	\emph{IF the train event is Arrival AND the doors are DoorsOpen THEN the PassengerDisplayComponent must receive an ArrivalEvent via passengerDisplayPort.}
 \end{quote}
@@ -70,7 +75,7 @@ Az \elem{1} LLM-hívás bemenete a követelmény, a teljes metamodell és a vál
 
 \paragraph{Megszorítások.} A megszorítások a követelményt a metamodell fogalmaival formalizálják: a gráfpredikátumok a követelményben szereplő helyzeteket írják le, a hibapredikátumok pedig a követelményt sértő állapotokat, amelyek érvényes példánymodellben nem fordulhatnak elő. A futó példában egy gráfpredikátum azt írja le, hogy a vonat nyitott ajtókkal érkezik (C1 és C2), egy hibapredikátum pedig kizárja azokat az állapotokat, amelyekben ilyenkor a \texttt{passengerDisplayPort} nem kapja meg az \texttt{ArrivalEvent} üzenetet.
 
-\paragraph{Tesztszcenáriók.} Egy szcenárió néhány ténnyel rögzít egy bemeneti helyzetet, és megjelöli, mely feltételek teljesülnek benne. A kimenetet nem rögzíti, azt a Refinery vezeti le (\aref{sec:overview-validation}.~szakasz). Az LLM a futó példához négy szcenáriót tervezett (\aref{tab:overview-decision}.~táblázat); közülük a TS1 a pozitív eset, amelyben a vonat nyitott ajtókkal érkezik, így a C1 és a C2 is teljesül.
+\paragraph{Tesztszcenáriók.} Egy szcenárió néhány ténnyel rögzít egy bemeneti helyzetet, és megjelöli, mely feltételek teljesülnek benne. A kimenetet nem rögzíti, azt a Refinery vezeti le (\aref{sec:overview-validation}.~szakasz). Az LLM a futó példához négy szcenáriót tervezett (\aref{tab:overview-decision}.~táblázat), közülük a TS1 a pozitív eset, amelyben a vonat nyitott ajtókkal érkezik, így a C1 és a C2 is teljesül.
 
 
 %----------------------------------------------------------------------------
@@ -83,7 +88,7 @@ Az LLM-válasz ellenőrzését \aref{fig:overview-validation}.~ábra részletezi
 \begin{figure}[!ht]
 	\centering
 	\includegraphics[width=\textwidth]{figures/overview-validation.pdf}
-	\caption{Az LLM-válasz ellenőrzése. A (3) és a (4) lépés szcenáriónként fut; a válasz akkor elfogadott, ha egyik szcenáriója sem elutasított.}
+	\caption{Az LLM-válasz ellenőrzése. A (3) és a (4) lépés szcenáriónként fut, a válasz akkor elfogadott, ha egyik szcenáriója sem elutasított.}
 	\label{fig:overview-validation}
 \end{figure}
 
@@ -92,13 +97,13 @@ A \elem{3} lépésben a Refinery minden szcenárióhoz példánymodelleket keres
 \begin{figure}[!ht]
 	\centering
 	\includegraphics[width=\textwidth]{figures/overview-instance.pdf}
-	\caption{A TS1 szcenárió egy példánymodelljének részlete. Szürke: a metamodell rögzített elemei; lila: a szcenárió bemeneti tényei; kék: a Refinery által generált elemek.}
+	\caption{A TS1 szcenárió egy példánymodelljének részlete. Szürke: a metamodell rögzített elemei, lila: a szcenárió bemeneti tényei, kék: a Refinery által generált elemek.}
 	\label{fig:overview-instance}
 \end{figure}
 
-Ha egy szcenárióhoz nincs példánymodell, a szcenárió ellentmondásos: vagy a helyzet a valóságban sem fordulhat elő, vagy a válasz hibás, például mert túl szigorúak a megszorítások. A \elem{4} lépés ezt úgy dönti el, hogy a szcenáriót csak a metamodell szerkezetével -- a típusokkal, a tartalmazási kapcsolatokkal és a multiplicitásokkal --, a szabályok és a megszorítások nélkül vizsgálja. Ha a helyzet már szerkezetileg is lehetetlen, és a szcenárió negatív eset, a megközelítés kizárja, hiszen ilyen bemenet a rendszerben nem állhat elő. Ilyen volna például a C2 feltétel negatív eseteként egy olyan érkezés, amelyben az ajtók zárva vannak. Minden más ellentmondásos szcenáriót elutasít.
+Ha egy szcenárióhoz nincs példánymodell, a szcenárió ellentmondásos: vagy a helyzet a valóságban sem fordulhat elő, vagy a válasz hibás, például mert túl szigorúak a megszorítások. A \elem{4} lépés ezt úgy dönti el, hogy a szcenáriót csak a metamodell szerkezeti elemei (a típusok, a tartalmazási kapcsolatok és a multiplicitások) mentén, a szabályok és a megszorítások nélkül vizsgálja. Ha a helyzet már szerkezetileg is lehetetlen, és a szcenárió negatív eset, a megközelítés kizárja, hiszen ilyen bemenet a rendszerben nem állhat elő. Ilyen volna például a C2 feltétel negatív eseteként egy olyan érkezés, amelyben az ajtók zárva vannak. Minden más ellentmondásos szcenáriót elutasít.
 
-A válasz elutasított, ha a megszorítások hibásak, ha valamelyik szcenáriója elutasított, vagy ha egyik szcenáriója sem elfogadott. Ekkor az \elem{5} visszacsatolás az összes hibaüzenetet visszaküldi az LLM-nek, amely új, teljes választ ad. A futó példában az első válasz megszorításai a követelményen túlmenő tiltást is tartalmaztak: érkezéskor az \texttt{ArrivalEvent} üzenet az utaskijelző portján kívül más porton nem jelenhetett meg. A metamodell szabályai szerint azonban érkezéskor ez az üzenet a vonatvezérlő és a kezelőképernyő portjára is eljut, ezért minden olyan szcenárió ellentmondásos lett, amelyben a vonat nyitott ajtókkal érkezik, és a Refinery elutasította a választ. A második válasz már csak a követelményben szereplő elvárást formalizálta, és a Refinery elfogadta.
+A rendszer elutasítja a választ, ha a megszorítások hibásak, ha valamelyik szcenáriója elutasított, vagy ha egyik szcenáriója sem elfogadott. Ekkor az \elem{5} visszacsatolás az összes hibaüzenetet visszaküldi az LLM-nek, amely új, teljes választ ad. A futó példában az első válasz megszorításai a követelményen túlmenő tiltást is tartalmaztak: érkezéskor az \texttt{ArrivalEvent} üzenet az utaskijelző portján kívül más porton nem jelenhetett meg. A metamodell szabályai szerint azonban érkezéskor ez az üzenet a vonatvezérlő és a kezelőképernyő portjára is eljut, ezért minden olyan szcenárió ellentmondásos lett, amelyben a vonat nyitott ajtókkal érkezik, és a Refinery elutasította a választ. A második válasz már csak a követelményben szereplő elvárást formalizálta, és a Refinery elfogadta.
 
 
 %----------------------------------------------------------------------------
@@ -106,7 +111,7 @@ A válasz elutasított, ha a megszorítások hibásak, ha valamelyik szcenárió
 \label{sec:overview-coverage}
 %----------------------------------------------------------------------------
 
-A \elem{6} lefedettség-elemzés az elfogadott válaszból döntési táblát készít (\aref{tab:overview-decision}.~táblázat). A tábla minden elfogadott szcenárióhoz megadja a feltételek értékét, az ezekkel az értékekkel aktiválódó szabályokat és az általuk megkövetelt elvárásokat. A feltételek értékei a szcenáriók jelöléseiből származnak; a Refinery azt garantálja, hogy minden elfogadott szcenárió a rendszer egy lehetséges állapota.
+A \elem{6} lefedettség-elemzés az elfogadott válaszból döntési táblát készít (\aref{tab:overview-decision}.~táblázat). A tábla minden elfogadott szcenárióhoz megadja a feltételek értékét, az ezekkel az értékekkel aktiválódó szabályokat és az általuk megkövetelt elvárásokat. A feltételek értékei a szcenáriók jelöléseiből származnak. A Refinery azt garantálja, hogy minden elfogadott szcenárió a rendszer egy lehetséges állapota.
 
 \begin{table}[!ht]
 	\footnotesize
@@ -121,10 +126,16 @@ A \elem{6} lefedettség-elemzés az elfogadott válaszból döntési táblát k�
 		TS4 & vészfékezés nyílt pályán, zárt ajtók & H & H & -- & -- \\
 		\bottomrule
 	\end{tabular}
-	\caption{A futó példa döntési táblája. I: a feltétel teljesül, H: nem teljesül; Szabály: az aktiválódó szabályok; Elvárás: az általuk megkövetelt elvárások.}
+	\caption{A futó példa döntési táblája. I: a feltétel teljesül, H: nem teljesül, Szabály: az aktiválódó szabályok, Elvárás: az általuk megkövetelt elvárások.}
 	\label{tab:overview-decision}
 \end{table}
 
-A tábla alapján három lefedettségi kritérium értékelhető: minden feltétel legalább egy szcenárióban teljesüljön, és legalább egyben ne; minden szabály legalább egy szcenárióban aktiválódjon, és legalább egyben ne; minden elvárást legalább egy szcenárió követeljen meg. A futó példa mindhárom kritériumot teljesíti. Az elemzés hiányként jelzi a nem teljesülő kritériumokat és a stratégia hibáit, például ha egy szabály nem deklarált feltételre hivatkozik.
+A tábla alapján három lefedettségi kritérium értékelhető:
+\begin{itemize}
+	\item minden feltétel legalább egy szcenárióban teljesüljön, és legalább egyben ne;
+	\item minden szabály legalább egy szcenárióban aktiválódjon, és legalább egyben ne;
+	\item minden elvárást legalább egy szcenárió követeljen meg.
+\end{itemize}
+A futó példa mindhárom kritériumot teljesíti (az érkezés zárt ajtókkal esetét a \elem{4} lépés szerkezetileg lehetetlenként kizárta).
 
-A \elem{7} tesztstratégia-riport a mérnöknek szóló, átnézhető dokumentum. Tartalmazza a követelményt, a tesztstratégiát a forrásszövegekkel, a megszorításokat, a szcenáriókat a tényeikkel és egy-egy példánymodellel, a kizárt szcenáriókat, a lefedettség-elemzést, valamint az elutasított kísérleteket a hibaüzeneteikkel. Az elemek azonosítókkal hivatkoznak egymásra, így a riportban minden szcenárió, szabály, feltétel és elvárás visszakövethető a követelményre.
+A \elem{7} tesztstratégia-riport a mérnöknek szóló, áttekinthető dokumentum. Tartalmazza a követelményt, a tesztstratégiát a forrásszövegekkel, a megszorításokat, a szcenáriókat a tényeikkel és egy-egy példánymodellel, a kizárt szcenáriókat, a lefedettség-elemzést, valamint az elutasított kísérleteket a hibaüzeneteikkel. Az elemek azonosítókkal hivatkoznak egymásra, így a riportban minden szcenárió, szabály, feltétel és elvárás visszakövethető a követelményre.

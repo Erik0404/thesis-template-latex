@@ -8,8 +8,20 @@
 %----------------------------------------------------------------------------
 \chapter*{Kivonat}\addcontentsline{toc}{chapter}{Kivonat}
 
-A biztonságkritikus rendszerek fejlesztésében a ráfordítás és a költségek jelentős részét nem az implementáció, hanem a verifikáció és a validáció teszi ki, vagyis annak igazolása, hogy a rendszer teljesíti a követelményeit. Számos fejlesztési folyamat és ipari szabvány előírja, hogy minden követelményhez tartozzon egy tesztstratégia, amely rögzíti a követelmény feltételeit, elvárt kimeneteit és lefedettségét. Ezek elkészítése és a változó követelményekkel való összhangban tartása költséges. A nagy nyelvi modellek (\emph{Large Language Model}, LLM) egyre több szoftverfejlesztési feladat -- köztük a tesztelés -- automatizálásában jelennek meg, így a biztonságkritikus követelmény- és tesztmenedzsment automatizálására is ígéretesnek tűnnek. Biztonságkritikus környezetben azonban minden generált eredménynek a rendszermodellre és az ipari szabványokra kell épülnie, és bizonyíthatóan összhangban kell lennie velük. Mivel az LLM-ek kimenete tévedéseket, logikai hibákat és hallucinációkat is tartalmazhat, ellenőrzés nélküli használatuk elfogadhatatlan. A dolgozatban egy olyan megközelítést mutatunk be, amely az LLM-eket formális, modellalapú verifikációval ötvözi, és természetes nyelvű követelményekből automatikusan állít elő tesztstratégiákat. A generálás a rendszer formális metamodelljére épül: egy automatikus ellenőrző ciklus elveti és javíttatja azokat az eredményeket, amelyek sértik a modell szabályait, így csak konzisztens stratégia születhet. Kidolgoztunk egy neuroszimbolikus módszert, amely a nyomon követhetőséget is biztosítja: minden generált elem visszavezethető arra a követelményre, amelyből származik. A megközelítést a nyílt forráskódú Refinery gráfalapú következtető keretrendszerre építve valósítottuk meg, alkalmazhatóságát és hatékonyságát pedig egy ipari probléma ihlette, biztonságkritikus vasúti esettanulmányon mutatjuk be. Így a tesztstratégiák gyorsan és megbízhatóan készíthetők el: a mérnököknek nem kell nulláról megírniuk őket, elég a formálisan ellenőrzött kimenetet átnézniük. Ez csökkenti a ráfordítást, miközben megőrzi a modellalapú rendszerek konzisztenciáját és helyességét.
-
+A biztonságkritikus rendszerek fejlesztésében az erőforrások és a költségek jelentős részét nem a megvalósítás, hanem a rendszerkövetelmények teljesülésének a 
+validálása és verifikálása teszi ki. Számos fejlesztési folyamat és ipari szabvány előírja, hogy minden egyes követelményhez tartozzon egy tesztstratégia, amely 
+rögzíti a feltételeket, az elvárt eredményeket és a lefedettséget. Ezek elkészítése, valamint a változó követelményekkel való összhangban tartása jelentős költségekkel 
+jár. A nagy nyelvi modelleket (LLM) egyre szélesebb körben alkalmazzák különböző szoftverfejlesztési feladatok, köztük a szoftvertesztelés automatizálására, így 
+ígéretes lehetőséget jelentenek a biztonságkritikus követelmény- és tesztmenedzsment folyamatainak automatizálásában is. Biztonságkritikus környezetben azonban minden 
+generált eredménynek, az alapul szolgáló rendszermodellre és az ipari szabványokra kell épülnie, valamint bizonyíthatóan összhangban kell lennie azokkal. A lehetséges 
+tévedések, logikai hibák és hallucinációk miatt az LLM-ek ellenőrzés nélküli használata elfogadhatatlan. A dolgozat egy olyan megközelítést mutat be, amely az LLM-eket 
+formális, modellalapú verifikációval ötvözve állít elő automatikusan tesztstratégiákat, természetes nyelvű követelményekből. A generálás a rendszer formális 
+metamodelljére támaszkodik, egy automatikus ellenőrző ciklus pedig elveti és finomítja azokat az eredményeket, amelyek sértik a modell szabályait. Ennek köszönhetően 
+kizárólag konzisztens stratégiák jönnek létre. A javasolt neuroszimbolikus módszer egy olyan nyomon követési mechanizmust is magában foglal, amely minden generált 
+elemet visszavezet az eredeti követelményre. A megközelítés a nyílt forráskódú Refinery gráfalapú következtető keretrendszerre építve valósult meg, alkalmazhatóságát 
+és hatékonyságát pedig egy ipari probléma ihlette, biztonságkritikus vasúti esettanulmány szemlélteti. A keretrendszer lehetővé teszi a tesztstratégiák gyors, 
+ugyanakkor megbízható előállítását. A mérnököknek nem kell ezeket az alapoktól elkészíteniük, elegendő a formálisan ellenőrzött kimenetet felülvizsgálniuk, ami 
+csökkenti a munkaigényt, miközben megőrzi a modellalapú rendszerek konzisztenciáját és helyességét.
 
 \vfill
 \selectenglish
