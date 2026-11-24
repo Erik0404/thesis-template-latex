@@ -40,11 +40,11 @@ I \models \varepsilon \iff I \models \forall \bar{x}\; \neg\beta_\varepsilon(\ba
 Egy szabály egy elvárását ezért olyan hibapredikátum formalizálja, amelynek törzse a feltételeket leíró minta és az elvárást leíró minta tagadásának konjunkciója: ahol a feltételek mintája illeszkedik, ott az elvárásénak is illeszkednie kell. A futó példa megszorításai (\aref{lst:impl-constraints}.~lista) a következők:
 \begin{align}
 \alpha(t) &\equiv \exists e\, \exists d\;\; \mathit{trainEvent}(t,e) \land \mathit{Arrival}(e) \land \mathit{arrDoors}(e,d) \land \mathit{DoorsOpen}(d), \label{eq:impl-alpha}\\
-\varepsilon(t,p) &\equiv \alpha(t) \land \mathit{isTargetPic}(p) \land \neg\, \mathit{hasArrivalEvent}(p), \label{eq:impl-eps}
+\varepsilon(t,p) &\equiv \alpha(t) \land \mathit{isTargetPassengerDisplay}(p) \land \neg\, \mathit{hasArrivalEvent}(p), \label{eq:impl-eps}
 \end{align}
-ahol $\alpha$ a C1 és a C2 feltétel együttes teljesülését írja le, az $\mathit{isTargetPic}$ a PIC portjára szűkít, a $\mathit{hasArrivalEvent}$ pedig az E1 elvárást fejezi ki. A hibapredikátumok szemantikája szerint minden érvényes modellben
+ahol $\alpha$ a C1 és a C2 feltétel együttes teljesülését írja le, az $\mathit{isTargetPassengerDisplay}$ az utaskijelző portjára szűkít, a $\mathit{hasArrivalEvent}$ pedig az E1 elvárást fejezi ki. A hibapredikátumok szemantikája szerint minden érvényes modellben
 \begin{equation}
-\forall t\, \forall p\;\; \bigl(\alpha(t) \land \mathit{isTargetPic}(p) \rightarrow \mathit{hasArrivalEvent}(p)\bigr),
+\forall t\, \forall p\;\; \bigl(\alpha(t) \land \mathit{isTargetPassengerDisplay}(p) \rightarrow \mathit{hasArrivalEvent}(p)\bigr),
 \end{equation}
 ami az R1 szabály elsőrendű megfelelője.
 
@@ -52,8 +52,9 @@ ami az R1 szabály elsőrendű megfelelője.
 pred gen_arrivalWithOpenDoors(Train t) <->
     trainEvent(t, e), Arrival(e), arrDoors(e, d), DoorsOpen(d).
 
-error gen_picMissingArrivalEvent(Train t, Port p) <->
-    gen_arrivalWithOpenDoors(t), isTargetPic(p), !hasArrivalEvent(p).
+error gen_passengerDisplayMissingArrivalEvent(Train t, Port p) <->
+    gen_arrivalWithOpenDoors(t), isTargetPassengerDisplay(p),
+    !hasArrivalEvent(p).
 \end{lstlisting}
 
 A metamodell egy szerkezeti részből -- típusok, tartalmazási kapcsolatok, multiplicitások, a rögzített példányrész és a hatókörök -- és a rendszer szabályait leíró $\mathcal{E}_{\mathrm{sys}}$ hibapredikátumokból áll. Jelölje $T_{\mathrm{str}}$ a szerkezeti részt, $T_{\mathrm{sys}} = T_{\mathrm{str}} \cup \mathcal{E}_{\mathrm{sys}}$ a teljes metamodellt, $T_\Gamma = T_{\mathrm{sys}} \cup \Gamma$ a megszorításokkal kiegészített elméletet, $\mathrm{Mod}(T)$ pedig a $T$-t kielégítő példánymodellek halmazát. Ha $\Gamma$ csak definíciókat és hibapredikátumokat tartalmaz, tetszőleges $F$ ténykészletre
@@ -80,7 +81,7 @@ A szcenárió csak a bemenetet rögzítheti. Ha egy elvárás mintája is szerep
 
 A válasz egyetlen JSON-objektum, amely a megszorításokat, a stratégiát a $\sigma$ forrásleképezéssel, valamint a szcenáriókat a $v_s$-t leíró jelölésekkel tartalmazza. A kiszolgáló a nem pontosan formázott választ, például a kódblokkba csomagoltat, is értelmezi; a nem értelmezhetőt formai hibaként jelzi, és ez a többi hibához hasonlóan visszajut a modellhez.
 
-A futó példa elfogadott válaszában $\Gamma$ a metamodell $\mathit{isTargetPic}$ és $\mathit{hasArrivalEvent}$ predikátumát hívja, nem definiálja újra, $F_{\mathrm{TS1}}$ pedig csak a $\mathit{t1}$ vonathoz kapcsolt új érkezést és ajtóállapotot vezeti be; az ArrivalEvent üzenetről nem tartalmaz tényt.
+A futó példa elfogadott válaszában $\Gamma$ a metamodell $\mathit{isTargetPassengerDisplay}$ és $\mathit{hasArrivalEvent}$ predikátumát hívja, nem definiálja újra, $F_{\mathrm{TS1}}$ pedig csak a $\mathit{t1}$ vonathoz kapcsolt új érkezést és ajtóállapotot vezeti be; az ArrivalEvent üzenetről nem tartalmaz tényt.
 
 
 %----------------------------------------------------------------------------
@@ -115,7 +116,7 @@ Az elutasított, de szerkezetileg lehetséges szcenáriókra a $T_{\mathrm{sys}}
 	\label{tab:impl-cases}
 \end{table}
 
-A futó példa első válaszában $\Gamma$ egy további hibapredikátumot is tartalmazott, amely érkezéskor a PIC-en kívüli célportokon tiltotta az ArrivalEvent üzenetet. A rendszer \texttt{missingArrivalEventBubble} szabálya miatt viszont minden olyan modellben, amelyben a vonat érkezik, a $\mathit{hasArrivalEvent}(\mathit{TMCPort})$ is igaz, így ugyanez a modell a többlettiltást sérti. Az érkezést leíró szcenáriók ezért a táblázat második sorába kerültek: a rendszer szerint lehetségesek voltak, csak a megszorítások zárták ki őket.
+A futó példa első válaszában $\Gamma$ egy további hibapredikátumot is tartalmazott, amely érkezéskor az utaskijelzőn kívül minden célporton tiltotta az ArrivalEvent üzenetet. A rendszer \texttt{missingArrivalEventBubble} szabálya miatt viszont minden olyan modellben, amelyben a vonat érkezik, a $\mathit{hasArrivalEvent}(\mathit{trainControlPort})$ is igaz, így ugyanez a modell a többlettiltást sérti. Az érkezést leíró szcenáriók ezért a táblázat második sorába kerültek: a rendszer szerint lehetségesek voltak, csak a megszorítások zárták ki őket.
 
 A modellgenerálás időkorláttal fut, ezért minden vizsgálatnak harmadik kimenete is lehet: eldöntetlen. Az eldöntetlen eredmény nem bizonyít ellentmondást, ezért kizárást sosem indokol, és a szcenárió elutasított. Tanúmodellek keresésekor a generátor időtúllépéskor a már megtalált modelleket sem adja vissza, ezért a vezérlő a kért modellszámot felezve új generálást indít ($n, \lfloor n/2 \rfloor, \dots, 1$). Így szcenáriónként legfeljebb $\lfloor \log_2 n \rfloor + 1$ generálás fut, és a szcenárió csak akkor bukik időtúllépéssel, ha egyetlen modell sem készül el.
 
@@ -167,7 +168,7 @@ A generátor a modellhalmaznak csak egy $\mathcal{I} \subseteq \mathrm{Mod}(T_\G
 \end{equation}
 A minta közös tényei tehát a szükségszerű tények felülbecslései: egy tény attól, hogy minden megtalált modellben szerepel, még nem szükségszerű, különösen, mert a generátor nem egyenletesen mintavételez. A riport ezért a modelleket tanúként mutatja be -- szcenáriónként az elsőt, a metamodell rögzített tényei és $F_s$ nélkül --, és szükségszerűséget nem állít; ennek igazolásához tényenként egy további ellentmondás-vizsgálat kellene.
 
-A TS1 esetén az E1 elvárás szükségszerűsége ugyanakkor magából $\Gamma$-ból következik. $F_{\mathrm{TS1}}$ mellett $\alpha(\mathit{t1})$ igaz, a PIC portjára az $\mathit{isTargetPic}$ teljesül, így az $\varepsilon$ hibapredikátum miatt minden modellben $\mathit{hasArrivalEvent}(\mathit{PICPort})$; erre a tényre a szükségszerűség feltétele konstrukció szerint teljesül.
+A TS1 esetén az E1 elvárás szükségszerűsége ugyanakkor magából $\Gamma$-ból következik. $F_{\mathrm{TS1}}$ mellett $\alpha(\mathit{t1})$ igaz, az utaskijelző portjára az $\mathit{isTargetPassengerDisplay}$ teljesül, így az $\varepsilon$ hibapredikátum miatt minden modellben $\mathit{hasArrivalEvent}(\mathit{passengerDisplayPort})$; erre a tényre a szükségszerűség feltétele konstrukció szerint teljesül.
 
 
 %----------------------------------------------------------------------------

@@ -35,11 +35,11 @@ A javasolt megközelítés egy természetes nyelvű követelményből és a rend
 \label{sec:overview-example}
 %----------------------------------------------------------------------------
 
-A megközelítést egy ipari probléma által ihletett vasúti esettanulmányon szemléltetjük, amelynek metamodellje egy vonat fedélzeti rendszerét írja le. A vonathoz egy aktuális vonatesemény tartozik -- érkezés, indulás vagy vészfékezés --, amely a vonat sebességét, a megállási ablakhoz viszonyított helyzetét és az ajtók állapotát is meghatározza; érkezéskor az ajtók mindig nyitva vannak. A fedélzeti komponensek -- köztük a vonatkezelő komponens (TMC), az utastájékoztató komponens (PIC) és a kezelőképernyő -- portjaikon keresztül kapnak üzeneteket. A futó példa követelménye:
+A megközelítést egy ipari probléma által ihletett vasúti esettanulmányon szemléltetjük, amelynek metamodellje egy vonat fedélzeti rendszerét írja le. A vonathoz egy aktuális vonatesemény tartozik -- érkezés, indulás vagy vészfékezés --, amely a vonat sebességét, a megállási ablakhoz viszonyított helyzetét és az ajtók állapotát is meghatározza; érkezéskor az ajtók mindig nyitva vannak. A fedélzeti komponensek -- köztük a vonatvezérlő, az utaskijelző és a kezelőképernyő -- portjaikon keresztül kapnak üzeneteket. A futó példa követelménye:
 \begin{quote}
-	\emph{IF the train event is Arrival AND the doors are DoorsOpen THEN the PassengerInformationComponent must receive an ArrivalEvent via PICPort.}
+	\emph{IF the train event is Arrival AND the doors are DoorsOpen THEN the PassengerDisplayComponent must receive an ArrivalEvent via passengerDisplayPort.}
 \end{quote}
-Eszerint ha a vonatesemény érkezés, és az ajtók nyitva vannak, az utastájékoztató komponensnek a \texttt{PICPort} porton keresztül meg kell kapnia az \texttt{ArrivalEvent} üzenetet.
+Eszerint ha a vonatesemény érkezés, és az ajtók nyitva vannak, az utaskijelzőnek a \texttt{passengerDisplayPort} porton keresztül meg kell kapnia az \texttt{ArrivalEvent} üzenetet.
 
 
 %----------------------------------------------------------------------------
@@ -60,7 +60,7 @@ Az \elem{1} LLM-hívás bemenete a követelmény, a teljes metamodell és a vál
 		\midrule
 		C1 & Az aktuális vonatesemény érkezés. & \emph{IF the train event is Arrival} \\
 		C2 & Az eseményhez tartozó ajtóállapot nyitott. & \emph{AND the doors are DoorsOpen} \\
-		E1 & A PIC a \texttt{PICPort} porton megkapja az \texttt{ArrivalEvent} üzenetet. & \emph{THEN the PassengerInformationComponent must receive an ArrivalEvent via PICPort} \\
+		E1 & Az utaskijelző a \texttt{passengerDisplayPort} porton megkapja az \texttt{ArrivalEvent} üzenetet. & \emph{THEN the PassengerDisplayComponent must receive an ArrivalEvent via passengerDisplayPort} \\
 		R1 & Ha C1 és C2 teljesül, akkor E1 kötelező. & -- \\
 		\bottomrule
 	\end{tabular}
@@ -68,7 +68,7 @@ Az \elem{1} LLM-hívás bemenete a követelmény, a teljes metamodell és a vál
 	\label{tab:overview-strategy}
 \end{table}
 
-\paragraph{Megszorítások.} A megszorítások a követelményt a metamodell fogalmaival formalizálják: a gráfpredikátumok a követelményben szereplő helyzeteket írják le, a hibapredikátumok pedig a követelményt sértő állapotokat, amelyek érvényes példánymodellben nem fordulhatnak elő. A futó példában egy gráfpredikátum azt írja le, hogy a vonat nyitott ajtókkal érkezik (C1 és C2), egy hibapredikátum pedig kizárja azokat az állapotokat, amelyekben ilyenkor a \texttt{PICPort} nem kapja meg az \texttt{ArrivalEvent} üzenetet.
+\paragraph{Megszorítások.} A megszorítások a követelményt a metamodell fogalmaival formalizálják: a gráfpredikátumok a követelményben szereplő helyzeteket írják le, a hibapredikátumok pedig a követelményt sértő állapotokat, amelyek érvényes példánymodellben nem fordulhatnak elő. A futó példában egy gráfpredikátum azt írja le, hogy a vonat nyitott ajtókkal érkezik (C1 és C2), egy hibapredikátum pedig kizárja azokat az állapotokat, amelyekben ilyenkor a \texttt{passengerDisplayPort} nem kapja meg az \texttt{ArrivalEvent} üzenetet.
 
 \paragraph{Tesztszcenáriók.} Egy szcenárió néhány ténnyel rögzít egy bemeneti helyzetet, és megjelöli, mely feltételek teljesülnek benne. A kimenetet nem rögzíti, azt a Refinery vezeti le (\aref{sec:overview-validation}.~szakasz). Az LLM a futó példához négy szcenáriót tervezett (\aref{tab:overview-decision}.~táblázat); közülük a TS1 a pozitív eset, amelyben a vonat nyitott ajtókkal érkezik, így a C1 és a C2 is teljesül.
 
@@ -87,7 +87,7 @@ Az LLM-válasz ellenőrzését \aref{fig:overview-validation}.~ábra részletezi
 	\label{fig:overview-validation}
 \end{figure}
 
-A \elem{3} lépésben a Refinery minden szcenárióhoz példánymodelleket keres, vagyis a rendszer olyan teljes, konkrét állapotait, amelyek tartalmazzák a szcenárió tényeit, és amelyekben a metamodell szabályai és a megszorítások is teljesülnek. Ha van ilyen modell, a szcenárió elfogadott, és a modellek megmutatják, hogyan kell viselkednie a rendszernek az adott helyzetben. \Aref{fig:overview-instance}.~ábra a TS1 egyik példánymodelljének részletét mutatja. A szcenárió csak az érkezést és a nyitott ajtókat rögzítette, a modellben mégis megjelenik az \texttt{ArrivalEvent} üzenet a \texttt{PICPort} porton, vagyis teljesül az E1 elvárás. Az üzenet a TMC és a kezelőképernyő portjára is eljut, amit a metamodell meglévő szabályai írnak elő.
+A \elem{3} lépésben a Refinery minden szcenárióhoz példánymodelleket keres, vagyis a rendszer olyan teljes, konkrét állapotait, amelyek tartalmazzák a szcenárió tényeit, és amelyekben a metamodell szabályai és a megszorítások is teljesülnek. Ha van ilyen modell, a szcenárió elfogadott, és a modellek megmutatják, hogyan kell viselkednie a rendszernek az adott helyzetben. \Aref{fig:overview-instance}.~ábra a TS1 egyik példánymodelljének részletét mutatja. A szcenárió csak az érkezést és a nyitott ajtókat rögzítette, a modellben mégis megjelenik az \texttt{ArrivalEvent} üzenet a \texttt{passengerDisplayPort} porton, vagyis teljesül az E1 elvárás. Az üzenet a vonatvezérlő és a kezelőképernyő portjára is eljut, amit a metamodell meglévő szabályai írnak elő.
 
 \begin{figure}[!ht]
 	\centering
@@ -98,7 +98,7 @@ A \elem{3} lépésben a Refinery minden szcenárióhoz példánymodelleket keres
 
 Ha egy szcenárióhoz nincs példánymodell, a szcenárió ellentmondásos: vagy a helyzet a valóságban sem fordulhat elő, vagy a válasz hibás, például mert túl szigorúak a megszorítások. A \elem{4} lépés ezt úgy dönti el, hogy a szcenáriót csak a metamodell szerkezetével -- a típusokkal, a tartalmazási kapcsolatokkal és a multiplicitásokkal --, a szabályok és a megszorítások nélkül vizsgálja. Ha a helyzet már szerkezetileg is lehetetlen, és a szcenárió negatív eset, a megközelítés kizárja, hiszen ilyen bemenet a rendszerben nem állhat elő. Ilyen volna például a C2 feltétel negatív eseteként egy olyan érkezés, amelyben az ajtók zárva vannak. Minden más ellentmondásos szcenáriót elutasít.
 
-A válasz elutasított, ha a megszorítások hibásak, ha valamelyik szcenáriója elutasított, vagy ha egyik szcenáriója sem elfogadott. Ekkor az \elem{5} visszacsatolás az összes hibaüzenetet visszaküldi az LLM-nek, amely új, teljes választ ad. A futó példában az első válasz megszorításai a követelményen túlmenő tiltást is tartalmaztak: érkezéskor az \texttt{ArrivalEvent} üzenet a PIC portján kívül más porton nem jelenhetett meg. A metamodell szabályai szerint azonban érkezéskor ez az üzenet a TMC és a kezelőképernyő portjára is eljut, ezért minden olyan szcenárió ellentmondásos lett, amelyben a vonat nyitott ajtókkal érkezik, és a Refinery elutasította a választ. A második válasz már csak a követelményben szereplő elvárást formalizálta, és a Refinery elfogadta.
+A válasz elutasított, ha a megszorítások hibásak, ha valamelyik szcenáriója elutasított, vagy ha egyik szcenáriója sem elfogadott. Ekkor az \elem{5} visszacsatolás az összes hibaüzenetet visszaküldi az LLM-nek, amely új, teljes választ ad. A futó példában az első válasz megszorításai a követelményen túlmenő tiltást is tartalmaztak: érkezéskor az \texttt{ArrivalEvent} üzenet az utaskijelző portján kívül más porton nem jelenhetett meg. A metamodell szabályai szerint azonban érkezéskor ez az üzenet a vonatvezérlő és a kezelőképernyő portjára is eljut, ezért minden olyan szcenárió ellentmondásos lett, amelyben a vonat nyitott ajtókkal érkezik, és a Refinery elutasította a választ. A második válasz már csak a követelményben szereplő elvárást formalizálta, és a Refinery elfogadta.
 
 
 %----------------------------------------------------------------------------
